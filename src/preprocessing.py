@@ -13,4 +13,25 @@ def load_data(filepath: str) -> pd.DataFrame:
     """
 
     generated_dataframe = pd.read_csv(filepath)
+
     return generated_dataframe
+
+
+def clean_data(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Dataset clearance. The function exists in order to handle every missing value
+    existing in the dataset. Also it transforms strings reffering to dates to  datetime
+    fields.
+
+    Parameters:
+        df (pd.DataFrame): The dataframe that needs clearing
+
+    Retuns:
+        A new clear pandas dataframe
+    """
+    df = df.dropna()
+
+    if "date" in df.columns:
+        df["date"] = pd.to_datetime(df["date"])
+
+    return df
