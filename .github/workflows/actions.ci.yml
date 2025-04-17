@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  code-quality:
+  setup-config:
     strategy:
       fail-fast: false
       matrix:
@@ -26,9 +26,17 @@ jobs:
         uses: abatilo/actions-poetry@v2.0.0
         with:
           poetry-version: ${{matrix.poetry-version}}
-      - name: Install dependencies
-        run: poetry install --with dev
-      - name: Run the ruff with the toml file.
-        run: poetry run ruff check --config ruff.toml
-      - name: Check for common security issues
-        run: poetry run bandit .
+      - name: Install dependencies for linting
+        run: poetry install --with dev,test
+  linting:
+      needs: setup-config
+      runs-on: ubuntu-latest
+      steps:
+        - name: Run the ruff with the toml file.
+          run: poetry run ruff check --config ruff.toml
+  code-security:
+      needs: setup-config
+      runs-on: ubuntu-latest
+      steps:
+        - name: Check for common security issues
+          run: poetry run bandit .
