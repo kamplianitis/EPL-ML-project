@@ -5,38 +5,12 @@ from sklearn.impute import SimpleImputer
 from typing import Literal
 
 
-def preprocess_data(
-    df: pd.DataFrame,
-    exclude_columns: list = None,
-    impute_strategy="mean",
-) -> tuple:
-    """
-    Removes non-numeric columns and standardizes the data.
-
-    Args:
-        df (pd.DataFrame): Input data.
-        exclude_columns (list): Columns to exclude before PCA.
-
-    Returns:
-        tuple: (preprocessed data array, StandardScaler object, feature names)
-    """
-    if exclude_columns:
-        df = df.drop(columns=exclude_columns, errors="ignore")
-    numeric_df = df.select_dtypes(include=["number"])
-
-    imputer = SimpleImputer(strategy=impute_strategy)
-    imputed_data = imputer.fit_transform(numeric_df)
-
-    scaler = StandardScaler()
-    scaled_data = scaler.fit_transform(imputed_data)
-
-    return scaled_data, scaler, numeric_df.columns.tolist()
-
-
 def apply_pca(
     data: list,
     n_components: int = 2,
     svd_solver: Literal["auto", "full", "arpack", "randomized"] = "auto",
+    whiten: bool = False,
+    random_state: int = None,
 ) -> tuple:
     """
     Applies PCA to the data.
@@ -49,7 +23,12 @@ def apply_pca(
     Returns:
         tuple: (PCA-transformed data, PCA object)
     """
-    pca = PCA(n_components=n_components, svd_solver=svd_solver)
+    pca = PCA(
+        n_components=n_components,
+        svd_solver=svd_solver,
+        whiten=whiten,
+        random_state=random_state,
+    )
     principal_components = pca.fit_transform(data)
     return principal_components, pca
 
