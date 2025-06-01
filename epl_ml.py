@@ -21,14 +21,13 @@ def pca(
         "--svd",
         case_sensitive=False,
         show_choices=True,
-        metavar="{'auto','full','arpack','randomized'}",
+        metavar="['auto','full','arpack','randomized']",
         prompt=False,
         help="Singular Value Decomposition method.",
     ),
     randon_state: Optional[int] = typer.Option(
         None, "--random-state", help="random number generation for reproducibility."
     ),
-    all: Optional[bool] = typer.Option(False, "--all", help="Run all the simulations."),
 ):
 
     import pandas as pd
@@ -44,44 +43,165 @@ def pca(
 
     df = pd.read_csv(filepath_or_buffer=file_path)
 
-    if not all:
-        exclude_columns = [
-            "MarketMaxHomeTeam",
-            "MarketMaxDraw",
-            "MarketMaxAwayTeam",
-            "MarketAvgHomeTeam",
-            "MarketAvgDraw",
-            "MarketAvgAwayTeam",
-            "MarketMaxOver2.5Goals",
-            "MarketMaxUnder2.5Goals",
-            "MarketAvgOver2.5Goals",
-            "MarketAvgUnder2.5Goals",
-        ]
+    exclude_columns = [
+        "MarketMaxHomeTeam",
+        "MarketMaxDraw",
+        "MarketMaxAwayTeam",
+        "MarketAvgHomeTeam",
+        "MarketAvgDraw",
+        "MarketAvgAwayTeam",
+        "MarketMaxOver2.5Goals",
+        "MarketMaxUnder2.5Goals",
+        "MarketAvgOver2.5Goals",
+        "MarketAvgUnder2.5Goals",
+    ]
 
-        data, _, _ = preprocess_data(df=df, exclude_columns=exclude_columns)
+    data, _, _ = preprocess_data(df=df, exclude_columns=exclude_columns)
 
-        principal_components, pca = apply_pca(
-            data,
-            n_components=n,
-            svd_solver=svd,
-            whiten=whiten,
-            random_state=randon_state,
-        )
+    principal_components, pca = apply_pca(
+        data,
+        n_components=n,
+        svd_solver=svd,
+        whiten=whiten,
+        random_state=randon_state,
+    )
 
-        pca_df = get_dataframe(data=principal_components, col_name="PC")
+    pca_df = get_dataframe(data=principal_components, col_name="PC")
 
-        print("\nExplained Variance Ratio:")
-        print(pca.explained_variance_ratio_)
+    print("\nExplained Variance Ratio:")
+    print(pca.explained_variance_ratio_)
 
-        print("\nPCA Result Preview:")
-        print(pca_df.head())
+    print("\nPCA Result Preview:")
+    print(pca_df.head())
 
 
 @app.command()
 def lda(
     dataset: str = typer.Option(..., exists=True, help="The name of the dataset"),
+    n: Optional[int] = typer.Option(
+        None, "--n", help="The number of linear discriminants to retain."
+    ),
+    solver: Optional[str] = typer.Option(
+        "svd",
+        "--solver",
+        case_sensitive=False,
+        show_choices=True,
+        metavar="['svd','lsqr', 'eigen']",
+        prompt=False,
+        help="The solving method option.",
+    ),
+    store_cov: Optional[bool] = typer.Option(
+        False,
+        "--store-cov/ --no-store-cov",
+        help="Whether the covariance matrix will be stored.",
+    ),
+    shrinkage: Optional[float] = typer.Option(
+        None,
+        "--shrink",
+        help="A shrinkage method to improve the estimation of the covariance matrix.",
+    ),
 ):
-    pass
+    import pandas as pd
+    from src.utils import csv_to_dataset
+    from src.utils import preprocess_data
+    from src.lda import apply_lda
+    from src.utils import get_dataframe
+
+    try:
+        file_path = csv_to_dataset(dataset)
+    except (FileNotFoundError, ValueError) as e:
+        raise e
+
+    df = pd.read_csv(filepath_or_buffer=file_path)
+    label_collumn = "FullTimeResult"
+
+    exclude_columns = [
+        "MarketMaxHomeTeam",
+        "MarketMaxDraw",
+        "MarketMaxAwayTeam",
+        "MarketAvgHomeTeam",
+        "MarketAvgDraw",
+        "MarketAvgAwayTeam",
+        "MarketMaxOver2.5Goals",
+        "MarketMaxUnder2.5Goals",
+        "MarketAvgOver2.5Goals",
+        "MarketAvgUnder2.5Goals",
+    ]
+    x, y, _, _ = preprocess_data(
+        df=df,
+        exclude_columns=exclude_columns,
+        label_column=label_collumn,
+        supervised=True,
+    )
+
+    X_lda, lda_model = apply_lda(
+        X=x, Y=y, n=n, solver=solver, store_cov=store_cov, shirnkage=shrinkage
+    )
+
+    lda_df = get_dataframe(data=X_lda, col_name="LD")
+
+    print("\nExplained Variance Ratio:")
+    print(lda_model.explained_variance_ratio_)
+
+    print("\nPCA Result Preview:")
+    print(lda_df.head())
+
+
+@app.command()
+def naiveBayes(
+    dataset: str = typer.Option(..., exists=True, help="The name of the dataset"),
+    model_type: Optional[str] = typer.Option(
+        "gaussian",
+        "--model",
+        case_sensitive=False,
+        show_choices=True,
+        metavar="['gaussian','multinomial', 'bernoulli']",
+        prompt=False,
+        help="The solving method option.",
+    ),
+    alpha: Optional[float] = typer.Option(1, "--alpha", help="Smoothing."),
+):
+    import pandas as pd
+    from src.NaiveBayes import preprocess_data, train_naive_bayes, evaluate_model
+    from src.utils import csv_to_dataset
+    from sklearn.model_selection import train_test_split
+
+    try:
+        file_path = csv_to_dataset(dataset)
+    except (FileNotFoundError, ValueError) as e:
+        raise e
+
+    df = pd.read_csv(file_path)
+
+    exclude_columns = [
+        "MatchID",
+        "Season",
+        "Date",
+        "Time",
+        "HomeTeam",
+        "AwayTeam",
+        "FullTimeResult",
+        "HalfTimeResult",
+        "Referee",
+    ]
+
+    df = df.drop(columns=exclude_columns, errors="ignore")
+    df = df.dropna(axis=1)
+
+    target_column = "HomeTeamPoints"
+
+    X, y, _ = preprocess_data(df, target_column=target_column, scale=True)
+
+    X_train, X_temp, y_train, y_temp = train_test_split(
+        X, y, test_size=0.3, random_state=42
+    )
+    X_dev, X_test, y_dev, y_test = train_test_split(
+        X_temp, y_temp, test_size=0.5, random_state=42
+    )
+
+    model = train_naive_bayes(X_train, y_train, model_type="gaussian")
+
+    evaluate_model(model, X_test, y_test)
 
 
 if __name__ == "__main__":
