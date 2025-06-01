@@ -10,7 +10,7 @@ app = typer.Typer(add_completion=False)
 @app.command()
 def pca(
     dataset: str = typer.Option(..., exists=True, help="The name of the dataset"),
-    n: Optional[float] = typer.Option(
+    n: Optional[str] = typer.Option(
         None, "--n", help="The number of principal components to retain"
     ),
     whiten: Optional[bool] = typer.Option(
@@ -47,9 +47,13 @@ def pca(
 
     data, _, _ = preprocess_data(df=df, exclude_columns=[])
 
+    if "." in n:
+        n_components_val = float(n)
+    else:
+        n_components_val = int(n)
     principal_components, pca = apply_pca(
         data,
-        n_components=n,
+        n_components=n_components_val,
         svd_solver=svd,
         whiten=whiten,
         random_state=randon_state,
