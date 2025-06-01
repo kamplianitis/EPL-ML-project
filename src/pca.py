@@ -5,7 +5,7 @@ from typing import Literal
 
 def apply_pca(
     data: list,
-    n_components: int = 2,
+    n_components: int = None,
     svd_solver: Literal["auto", "full", "arpack", "randomized"] = "auto",
     whiten: bool = False,
     random_state: int = None,
@@ -21,6 +21,7 @@ def apply_pca(
     Returns:
         tuple: (PCA-transformed data, PCA object)
     """
+
     pca = PCA(
         n_components=n_components,
         svd_solver=svd_solver,

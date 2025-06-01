@@ -1,6 +1,8 @@
 from typing import Optional
 import typer
-
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
 
 app = typer.Typer(add_completion=False)
 
@@ -8,7 +10,7 @@ app = typer.Typer(add_completion=False)
 @app.command()
 def pca(
     dataset: str = typer.Option(..., exists=True, help="The name of the dataset"),
-    n: Optional[int] = typer.Option(
+    n: Optional[float] = typer.Option(
         None, "--n", help="The number of principal components to retain"
     ),
     whiten: Optional[bool] = typer.Option(
@@ -43,20 +45,7 @@ def pca(
 
     df = pd.read_csv(filepath_or_buffer=file_path)
 
-    exclude_columns = [
-        "MarketMaxHomeTeam",
-        "MarketMaxDraw",
-        "MarketMaxAwayTeam",
-        "MarketAvgHomeTeam",
-        "MarketAvgDraw",
-        "MarketAvgAwayTeam",
-        "MarketMaxOver2.5Goals",
-        "MarketMaxUnder2.5Goals",
-        "MarketAvgOver2.5Goals",
-        "MarketAvgUnder2.5Goals",
-    ]
-
-    data, _, _ = preprocess_data(df=df, exclude_columns=exclude_columns)
+    data, _, _ = preprocess_data(df=df, exclude_columns=[])
 
     principal_components, pca = apply_pca(
         data,
@@ -70,9 +59,40 @@ def pca(
 
     print("\nExplained Variance Ratio:")
     print(pca.explained_variance_ratio_)
+    plt.figure(figsize=(8, 4))
+    plt.plot(
+        range(1, len(pca.explained_variance_ratio_) + 1),
+        pca.explained_variance_ratio_,
+        marker="o",
+    )
+    plt.title("Explained Variance Ratio by Principal Components")
+    plt.xlabel("Principal Component")
+    plt.ylabel("Explained Variance Ratio")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig("pca_explained_variance.png")
+    plt.close()
 
     print("\nPCA Result Preview:")
-    print(pca_df.head())
+    print(pca_df)
+
+    explained_variance = pca.explained_variance_ratio_
+    cumulative_variance = np.cumsum(explained_variance)
+
+    plt.figure(figsize=(8, 6))
+    plt.plot(
+        range(1, len(explained_variance) + 1),
+        cumulative_variance,
+        marker="o",
+        linestyle="--",
+    )
+    plt.title("Cumulative Explained Variance by Principal Components")
+    plt.xlabel("Number of Principal Components")
+    plt.ylabel("Cumulative Explained Variance")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig("pca_scatter_1.png")
+    plt.close()
 
 
 @app.command()
@@ -113,38 +133,48 @@ def lda(
         raise e
 
     df = pd.read_csv(filepath_or_buffer=file_path)
-    label_collumn = "FullTimeResult"
 
-    exclude_columns = [
-        "MarketMaxHomeTeam",
-        "MarketMaxDraw",
-        "MarketMaxAwayTeam",
-        "MarketAvgHomeTeam",
-        "MarketAvgDraw",
-        "MarketAvgAwayTeam",
-        "MarketMaxOver2.5Goals",
-        "MarketMaxUnder2.5Goals",
-        "MarketAvgOver2.5Goals",
-        "MarketAvgUnder2.5Goals",
-    ]
+    label_collumn = "FullTimeHomeTeamGoals"
+
     x, y, _, _ = preprocess_data(
         df=df,
-        exclude_columns=exclude_columns,
+        exclude_columns=[],
         label_column=label_collumn,
         supervised=True,
     )
 
     X_lda, lda_model = apply_lda(
-        X=x, Y=y, n=n, solver=solver, store_cov=store_cov, shirnkage=shrinkage
+        X=x,
+        Y=y,
+        n=n,
+        solver=solver,
+        store_cov=store_cov,
+        shirnkage=shrinkage,
     )
 
     lda_df = get_dataframe(data=X_lda, col_name="LD")
 
     print("\nExplained Variance Ratio:")
     print(lda_model.explained_variance_ratio_)
+    cumulative_var = np.cumsum(lda_model.explained_variance_ratio_)
 
-    print("\nPCA Result Preview:")
-    print(lda_df.head())
+    plt.figure(figsize=(8, 5))
+    plt.plot(
+        range(1, len(lda_model.explained_variance_ratio_) + 1),
+        cumulative_var,
+        marker="o",
+        linestyle="--",
+    )
+    plt.title("Cumulative Explained Variance (LDA)")
+    plt.xlabel("Number of Linear Discriminants")
+    plt.ylabel("Cumulative Explained Variance")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig("lda_scatter_1.png")
+    plt.close()
+
+    print("\nLDA Result Preview:")
+    print(lda_df)
 
 
 @app.command()
