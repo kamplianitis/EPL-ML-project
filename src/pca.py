@@ -14,7 +14,7 @@ def apply_pca(
     Applies PCA to the data.
 
     Args:
-        data (array-like): Scaled data.
+        data (list): Scaled data.
         n_components (int): Number of principal components.
         svd_solver (str): SVD solver to use ('auto', 'full', 'arpack', or 'randomized').
 
@@ -29,17 +29,3 @@ def apply_pca(
     )
     principal_components = pca.fit_transform(data)
     return principal_components, pca
-
-
-def get_pca_dataframe(pca_data: list) -> pd.DataFrame:
-    """
-    Creates a DataFrame from PCA-transformed data.
-
-    Args:
-        pca_data (array-like): PCA output.
-
-    Returns:
-        pd.DataFrame: PCA result as DataFrame.
-    """
-    columns = [f"PC{i+1}" for i in range(pca_data.shape[1])]
-    return pd.DataFrame(pca_data, columns=columns)

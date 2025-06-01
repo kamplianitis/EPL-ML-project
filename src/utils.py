@@ -1,5 +1,8 @@
 import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
 from pathlib import Path
+from typing import Literal
 
 
 def csv_to_dataset(file_name: str) -> pd.DataFrame:
@@ -24,29 +27,40 @@ def csv_to_dataset(file_name: str) -> pd.DataFrame:
         raise FileNotFoundError(f"'{file_name}' not found in data directory")
 
 
-# TODO: move this to utils
 def preprocess_data(
     df: pd.DataFrame,
+    label_column: str | None = None,
     exclude_columns: list = None,
-    impute_strategy="mean",
-) -> tuple:
+    impute_strategy: str = "mean",
+    supervised: bool = False,
+) -> (
+    tuple[np.ndarray, StandardScaler, list[str]]
+    | tuple[np.ndarray, np.ndarray, StandardScaler, list[str]]
+):
     """
     Removes non-numeric columns and standardizes the data.
 
-    Args:
+    Parameters:
         df (pd.DataFrame): Input data.
         exclude_columns (list): Columns to exclude before PCA.
+        input_strategy (str): The strategy to be followed (Default: mean)
+        supervised (bool): Determines whether the processing will be for supervised or
+            unsupervised data.
 
     Returns:
-        tuple: (preprocessed data array, StandardScaler object, feature names)
+        A tuple based on the needs of data processing
     """
 
-    from sklearn.preprocessing import StandardScaler
     from sklearn.impute import SimpleImputer
 
-    if exclude_columns:
-        df = df.drop(columns=exclude_columns, errors="ignore")
-    numeric_df = df.select_dtypes(include=["number"])
+    if not supervised:
+        if exclude_columns:
+            df = df.drop(columns=exclude_columns, errors="ignore")
+        numeric_df = df.select_dtypes(include=["number"])
+    else:
+        exclude_columns = set(exclude_columns + [label_column])
+        features_df = df.drop(columns=exclude_columns, errors="ignore")
+        numeric_df = features_df.select_dtypes(include=["number"])
 
     imputer = SimpleImputer(strategy=impute_strategy)
     imputed_data = imputer.fit_transform(numeric_df)
@@ -54,4 +68,24 @@ def preprocess_data(
     scaler = StandardScaler()
     scaled_data = scaler.fit_transform(imputed_data)
 
-    return scaled_data, scaler, numeric_df.columns.tolist()
+    if not supervised:
+        return scaled_data, scaler, numeric_df.columns.tolist()
+
+    y = df[label_column].values
+    return scaled_data, y, scaler, numeric_df.columns.tolist()
+
+
+def get_dataframe(data: list, col_name: Literal["PC", "LD"]) -> pd.DataFrame:
+    """
+    Creates a DataFrame from PCA-transformed data.
+
+    Parameters:
+        data (list): PCA/LDA output.
+        col_name (Literal["PC", "LD"]): PC or LD depending on the proccess.
+
+    Returns:
+        pd.DataFrame: PCA/LDA result as DataFrame.
+    """
+
+    columns = [f"{col_name}{i+1}" for i in range(data.shape[1])]
+    return pd.DataFrame(data, columns=columns)

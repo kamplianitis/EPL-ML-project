@@ -35,7 +35,7 @@ def pca(
     from src.utils import csv_to_dataset
     from src.utils import preprocess_data
     from src.pca import apply_pca
-    from src.pca import get_pca_dataframe
+    from src.utils import get_dataframe
 
     try:
         file_path = csv_to_dataset(dataset)
@@ -58,9 +58,7 @@ def pca(
             "MarketAvgUnder2.5Goals",
         ]
 
-        data, scaler, feature_names = preprocess_data(
-            df, exclude_columns=exclude_columns
-        )
+        data, _, _ = preprocess_data(df=df, exclude_columns=exclude_columns)
 
         principal_components, pca = apply_pca(
             data,
@@ -70,7 +68,7 @@ def pca(
             random_state=randon_state,
         )
 
-        pca_df = get_pca_dataframe(principal_components)
+        pca_df = get_dataframe(data=principal_components, col_name="PC")
 
         print("\nExplained Variance Ratio:")
         print(pca.explained_variance_ratio_)
@@ -81,7 +79,7 @@ def pca(
 
 @app.command()
 def lda(
-    test1: int,
+    dataset: str = typer.Option(..., exists=True, help="The name of the dataset"),
 ):
     pass
 
