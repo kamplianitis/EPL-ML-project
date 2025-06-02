@@ -3,6 +3,8 @@ import typer
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+from sklearn.metrics import accuracy_score
+from sklearn.linear_model import LogisticRegression
 
 app = typer.Typer(add_completion=False)
 
@@ -78,7 +80,7 @@ def pca(
     plt.close()
 
     print("\nPCA Result Preview:")
-    print(pca_df)
+    print(pca_df.head())
 
     explained_variance = pca.explained_variance_ratio_
     cumulative_variance = np.cumsum(explained_variance)
@@ -137,7 +139,7 @@ def lda(
         raise e
 
     df = pd.read_csv(filepath_or_buffer=file_path)
-
+    print(df.select_dtypes(["number"]).columns.to_list())
     label_collumn = "FullTimeHomeTeamGoals"
 
     x, y, _, _ = preprocess_data(
@@ -179,6 +181,13 @@ def lda(
 
     print("\nLDA Result Preview:")
     print(lda_df)
+
+    plt.figure(figsize=(8, 5))
+    plt.xlabel("LD1")
+    plt.ylabel("LD2")
+    plt.scatter(X_lda[:, 0], X_lda[:, 1], c=y, cmap="BuGn_r", edgecolors="r")
+    plt.savefig("lda_scatter_11.png")
+    plt.close()
 
 
 @app.command()
